@@ -27,12 +27,12 @@ module.exports = (robot) ->
   dailyBirthdayCheck = schedule.scheduleJob process.env.BIRTHDAY_CRON_STRING, ->
     console.log "checking today's birthdays..."
     birthdayUsers = findUsersBornOnDate(moment(), robot.brain.data.users)
-
+    
     if birthdayUsers.length is 1
       # send message for one users birthday
       msg = "<!channel> Today is <@#{birthdayUsers[0].name}>'s birthday!"
       msg += "\n#{quote()}"
-      robot.messageRoom "#general", msg
+      robot.messageRoom "#bottest", msg
     else if birthdayUsers.length > 1
       # send message for multiple users birthdays
       msg = "<!channel> Today is "
@@ -40,7 +40,7 @@ module.exports = (robot) ->
         msg += "<@#{user.name}>'s#{if idx != (birthdayUsers.length - 1) then " and " else ""}"
       msg += " birthday!"
       msg += "\n#{quote()}"
-      robot.messageRoom "#general", msg
+      robot.messageRoom "#bottest", msg
 
   robot.hear regex, (msg) ->
     name = msg.match[2]
@@ -55,6 +55,7 @@ module.exports = (robot) ->
       msg.send getAmbiguousUserText users
     else
       msg.send "#{name}? Never heard of 'em"
+      msg.send "Users are: #{users}" 
 
   robot.respond /list birthdays/i, (msg) ->
     users = robot.brain.data.users
@@ -67,6 +68,21 @@ module.exports = (robot) ->
         if isValidBirthdate user.date_of_birth
           message += "#{user.name} was born on #{user.date_of_birth}\n"
       msg.send message
+
+  robot.hear /^(delete birthday) (?:@?([\w .\-]+)\?*)/i, (msg) ->
+    users = robot.brain.data.users
+    name = msg.match[2]
+    msg.send(name)
+    users = robot.brain.usersForFuzzyName(name)
+    if users.length is 1
+      user = users[0]
+      robot.brain.data.remove(user)
+      msg.send "#{name} is now removed from birthday list"
+    else if users.length > 1
+      msg.send getAmbiguousUserText users
+    else
+      msg.send "#{name}? Never heard of 'em"
+
 
   getAmbiguousUserText = (users) ->
     "Be more specific, I know #{users.length} people named like that: #{(user.name for user in users).join(", ")}"
